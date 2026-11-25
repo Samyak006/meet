@@ -8,6 +8,24 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(summary) make the STT request timeout configurable
+- ✨(summary) make ASR response format configurable #1946
+- ✨(sdk) show and send the dial-in number and pin code
+
+### Fixed
+
+- 🔒️(agents) upgrade libzstd1 to fix CVE-2026-124851
+- 🩹(summary) name unsupported parameters in the STT 400 error log #1946
+- ♿️(frontend) name the header settings tabs on small screens
+- ♿️(frontend) announce the copy of the connection details
+- ♿️(frontend) name the in-meeting settings dialog on small screens
+- ♿️(frontend) stop exposing the header actions as a navigation
+- ♿️(frontend) size video elements in CSS, not with HTML attributes
+- 🐛(backend) return RFC 6749 errors from the application token endpoint
+- ♿️(frontend) stop exposing the meeting controls as a navigation #1883
+
 ## [1.38.0] - 2026-11-24
 
 ### Added

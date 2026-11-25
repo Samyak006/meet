@@ -1,5 +1,19 @@
 export type CallbackCreationRoomData = {
   slug: string
+  // Telephony PIN, only present when telephony is enabled
+  pin_code?: string
+}
+
+/** Room payload posted to the SDK consumer with ROOM_CREATED. */
+export type SdkRoomData = {
+  slug: string
+  url: string
+  // Dial-in phone number (international format), with telephony enabled
+  phone?: string
+  // Room PIN code (digits only), to enter after dialing `phone`
+  code?: string
+  // Ready-to-share text, the one of the copy button
+  displayText: string
 }
 
 export enum ClientMessageType {

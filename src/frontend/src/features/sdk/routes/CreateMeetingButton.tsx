@@ -14,6 +14,11 @@ import { useRoomCreationCallback } from '../api/useRoomCreationCallback'
 import { PopupManager } from '../utils/PopupManager'
 import { CallbackCreationRoomData } from '../utils/types'
 import { useSearchParams } from 'wouter'
+import { useTelephony } from '@/features/rooms/livekit/hooks/useTelephony'
+import { useConfig } from '@/api/useConfig'
+import { buildSdkRoomData } from '../utils/buildSdkRoomData'
+import { formatPinCode } from '@/features/rooms/utils/telephony'
+import { useCopyRoomToClipboard } from '@/features/rooms/livekit/hooks/useCopyRoomToClipboard'
 
 const popupManager = new PopupManager()
 
@@ -28,8 +33,10 @@ const CreateMeetingButton = () => {
   const initialRoom = useMemo(() => {
     const roomSlug = searchParams.get('slug')
     if (!roomSlug) return undefined
+    const pinCode = searchParams.get('code')?.trim()
     return {
       slug: roomSlug.trim(), // Trim whitespace for safety
+      ...(pinCode && /^\d+$/.test(pinCode) && { pin_code: pinCode }),
     }
   }, [searchParams])
 
@@ -44,9 +51,28 @@ const CreateMeetingButton = () => {
 
   const { data } = useRoomCreationCallback({ callbackId })
 
+  const telephony = useTelephony()
+  const { isPending: isConfigPending } = useConfig()
+
+  const { t: tClipboard } = useTranslation('global', {
+    keyPrefix: 'clipboardContent',
+  })
+
+  const [createdRoom, setCreatedRoom] = useState<
+    CallbackCreationRoomData | undefined
+  >(undefined)
+
+  // Same rule as the ROOM_CREATED payload: shown only when both are known
+  const sdkRoom = useMemo(
+    () => room && buildSdkRoomData(room, telephony, tClipboard),
+    [room, telephony, tClipboard]
+  )
+
   const roomUrl = useMemo(() => {
     if (room?.slug) return getRouteUrl('room', room.slug)
   }, [room])
+
+  const { copyRoomToClipboard } = useCopyRoomToClipboard(room)
 
   const backgroundColor = useMemo(() => {
     const param = searchParams.get('backgroundColor')
@@ -78,32 +104,32 @@ const CreateMeetingButton = () => {
 
   useEffect(() => {
     if (!data?.room?.slug) return
-    setRoom(data.room)
-    setIsRoomCreatedInSession(true)
     setCallbackId(undefined)
-    setIsPending(false)
-    popupManager.sendRoomData({
-      room: {
-        url: getRouteUrl('room', data.room.slug),
-        ...data.room,
-      },
-    })
+    setCreatedRoom(data.room)
   }, [data])
 
   useEffect(() => {
     popupManager.setupMessageListener(
       (id) => setCallbackId(id),
-      (data) => {
-        setRoom(data)
-        setIsRoomCreatedInSession(true)
-        setIsPending(false)
-      }
+      (data) => setCreatedRoom(data)
     )
 
     return () => popupManager.cleanup()
   }, [])
 
+  useEffect(() => {
+    if (!createdRoom || isConfigPending) return
+    setCreatedRoom(undefined)
+    setRoom(createdRoom)
+    setIsRoomCreatedInSession(true)
+    setIsPending(false)
+    popupManager.sendRoomData({
+      room: buildSdkRoomData(createdRoom, telephony, tClipboard),
+    })
+  }, [createdRoom, isConfigPending, telephony, tClipboard])
+
   const resetState = () => {
+    setCreatedRoom(undefined)
     setRoom(undefined)
     setIsRoomCreatedInSession(false)
     setCallbackId(undefined)
@@ -181,10 +207,10 @@ const CreateMeetingButton = () => {
                 variant="quaternaryText"
                 square
                 icon={<RiFileCopyLine />}
-                onPress={() => {
-                  navigator.clipboard.writeText(roomUrl)
-                }}
-                aria-label={t('copyLinkTooltip')}
+                onPress={copyRoomToClipboard}
+                aria-label={
+                  sdkRoom?.code ? t('copyInfoTooltip') : t('copyLinkTooltip')
+                }
               />
               {searchParams.get('readOnly') === 'false' && (
                 <Button
@@ -201,6 +227,18 @@ const CreateMeetingButton = () => {
             <Text variant={'smNote'} margin={false} centered={false}>
               {roomUrl.replace('https://', '')}
             </Text>
+            {sdkRoom?.phone && sdkRoom.code && (
+              <>
+                <Text variant={'smNote'} margin={false} centered={false}>
+                  {t('phone.call')}{' '}
+                  {telephony.country && `(${telephony.country}) `}
+                  {sdkRoom.phone}
+                </Text>
+                <Text variant={'smNote'} margin={false} centered={false}>
+                  {t('phone.pinCode')} {formatPinCode(sdkRoom.code)}
+                </Text>
+              </>
+            )}
             <Text variant={'smNote'} margin={false} centered={false}>
               {t('participantLimit')}
             </Text>
