@@ -7,13 +7,13 @@ from django.db import transaction
 from django.db.models import Exists, OuterRef
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
+from django.conf import settings
 
 from core.recording.event import notification
 
 from . import models
 from .tasks.file import process_file_deletion
 from .utils import generate_download_s3_url
-
 
 def hard_delete_file(file):
     """Hard delete a file, soft deleting it first when needed."""
@@ -506,11 +506,33 @@ class RecordingAdmin(admin.ModelAdmin):
 
         return str(owners[0].user)
 
+class ApplicationDomainInlineFormset(forms.models.BaseInlineFormSet):
+    """Inline row validation for domains"""
+
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+        if not settings.APPLICATION_DOMAIN_REQUIRED:
+            return
+        has_domains = False # update to "True" if domain is non-empty
+        for form in self.forms:
+            if form.cleaned_data and not form.cleaned_data.get("DELETE"):
+                if form.cleaned_data.get("domain").strip() != '':
+                    #Add validation (validators.DomainNameValidator)
+                    has_domains|=True
+
+        if not has_domains:
+            raise forms.ValidationError("Atleast one email domain is reuqired for an application.")
+
+
+        
 
 class ApplicationDomainInline(admin.TabularInline):
     """Inline admin for managing allowed domains per application."""
 
     model = models.ApplicationDomain
+    formset = ApplicationDomainInlineFormset
     extra = 0
 
 

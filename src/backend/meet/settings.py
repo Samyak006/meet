@@ -1213,7 +1213,13 @@ class Base(Configuration):
         None,
         environ_name="APPLICATION_BASE_URL",
         environ_prefix=None,
+    ) 
+    APPLICATION_DOMAIN_REQUIRED = values.BooleanValue(
+        False,
+        environ_name = "APPLICATION_DOMAIN_REQUIRED",
+        environ_prefix = None,
     )
+
 
     # User access tokens (embedded frontend / iframe support)
     USER_ACCESS_TOKEN_ENABLED = values.BooleanValue(

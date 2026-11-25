@@ -52,6 +52,9 @@ LIVEKIT_API_KEY=meet
 LIVEKIT_API_URL=https://${LIVEKIT_HOST}
 ALLOW_UNREGISTERED_ROOMS=False
 
+#Application (External)
+#APPLICATION_DOMAIN_REQUIRED=False
+
 # Recording: the Recording guide
 #RECORDING_ENABLE=True
 #AWS_S3_ENDPOINT_URL=http://garage:9000
